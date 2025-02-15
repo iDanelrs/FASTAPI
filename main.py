@@ -1,56 +1,66 @@
 from fastapi import FastAPI, HTTPException
-from typing import Optional
+from pydantic import BaseModel
+from typing import List, Optional
+from datetime import date
 
-app= FastAPI(
-    title="Mi primer FastAPI",
-    description="Alfredo Danel Rolón Salazar",
+app = FastAPI(
+    title="API de Gestión de Tareas",
+    description="API para gestionar una lista de tareas (To-Do List)",
     version="1.0.1"
 )
 
-usuarios=[
-    {"id":1, "nombre": "danel", "edad": 21},
-    {"id":2, "nombre": "juan", "edad": 20},
-    {"id":3, "nombre": "adan", "edad": 22},
-    {"id":4, "nombre": "brayan", "edad": 23},
-    {"id":5, "nombre": "jose", "edad": 22},
-    {"id":6, "nombre": "carlos", "edad": 24},
+class Tarea(BaseModel):
+    id: int
+    titulo: str
+    descripcion: str
+    vencimiento: date
+    estado: bool 
+
+tareas = [
+    {
+        "id": 1,
+        "titulo": "Estudiar para el examen",
+        "descripcion": "Repasar los apuntes de TAI",
+        "vencimiento": "2024-02-14",
+        "estado": True
+    }
 ]
 
 @app.get("/", tags=["Inicio"])
 def main():
-    return {'Hello World from FastAPI':'Danel Rolon Salazar'}
+    return {'Hello World from FastAPI': 'API de Gestión de Tareas'}
 
-@app.get("/usuarios", tags=["Operaciones CRUD"])
-def ConstultarUsuarios():
-    return ["Usuarios Registrados", usuarios]
+@app.get("/tareas", tags=["Tareas"])
+def obtener_todas_las_tareas():
+    return {"tareas": tareas}
 
-@app.post("/usuario/", tags=["Operaciones CRUD"])
-def AgregarUsuario(UsuarioNuevo: dict):
-    for usr in usuarios:
-        if usr["id"]==UsuarioNuevo.get("id"):
+@app.get("/tareas/{id}", tags=["Tareas"])
+def obtener_tarea_por_id(id: int):
+    for tarea in tareas:
+        if tarea["id"] == id:
+            return {"tarea": tarea}
+    raise HTTPException(status_code=404, detail="Tarea no encontrada")
+
+@app.post("/tareas/", tags=["Tareas"])
+def crear_tarea(tarea: Tarea):
+    for t in tareas:
+        if t["id"] == tarea.id:
             raise HTTPException(status_code=400, detail="El ID ya existe")
-    
-    usuarios.append(UsuarioNuevo)
-    return {"Usuario Agregado": UsuarioNuevo}
+    tareas.append(tarea.dict())
+    return {"tarea_creada": tarea}
 
-@app.put("/usuario/{id}", tags=["Operaciones CRUD"])
-def ActualizarUsuario(id: int, UsuarioActualizar: dict):
-    for usr in usuarios:
-        if usr["id"]==id:
-            usr["nombre"]=UsuarioActualizar.get("nombre")
-            usr["edad"]=UsuarioActualizar.get("edad")
-            return {"Usuario Actualizado": usr}
-    
-    raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    return {"Usuario Actualizado": UsuarioActualizar}
+@app.put("/tareas/{id}", tags=["Tareas"])
+def actualizar_tarea(id: int, tarea_actualizada: Tarea):
+    for tarea in tareas:
+        if tarea["id"] == id:
+            tarea.update(tarea_actualizada.dict())
+            return {"tarea_actualizada": tarea}
+    raise HTTPException(status_code=404, detail="Tarea no encontrada")
 
-@app.delete("/usuario/{id}", tags=["Operaciones CRUD"])
-def EliminarUsuario(id: int):
-    for usr in usuarios:
-        if usr["id"]==id:
-            usuarios.remove(usr)
-            return {"Usuario Eliminado": usr}
-    
-    raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    return {"Usuario Eliminado": usr}   
-
+@app.delete("/tareas/{id}", tags=["Tareas"])
+def eliminar_tarea(id: int):
+    for tarea in tareas:
+        if tarea["id"] == id:
+            tareas.remove(tarea)
+            return {"tarea_eliminada": tarea}
+    raise HTTPException(status_code=404, detail="Tarea no encontrada")  
