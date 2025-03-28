@@ -19,7 +19,7 @@ Base.metadata.create_all(bind=engine)
 
 @app.get('/',tags=['Inicio'])
 def main():
-    return{'hello FastAPI':'Carlos Velázquez'}
+    return{'hello FastAPI':'Danel Rolon'}
 
 #dependencies= [Depends(bearerJWT())]
 
@@ -40,36 +40,62 @@ def ConsultarTodos():
 #endpoint para agregar usuarios
 @app.post('/usuarios/', response_model=modelUsuario, tags=['Operaciones CRUD'])
 def AgregarUsuarios(usuarionuevo: modelUsuario):
-    db= Session()
+    db = Session()
     try:
-        db.add(User(**usuarionuevo.model_dump()))
+        nuevo_usuario = User(**usuarionuevo.model_dump())
+        db.add(nuevo_usuario)
         db.commit()
-        return JSONResponse(status_code=201,content={"mensaje":"Usuario Guardado","usuario":usuarionuevo.model_dump()})
+        db.refresh(nuevo_usuario) 
+        return JSONResponse(status_code=201, content={"mensaje": "Usuario Guardado", "usuario": jsonable_encoder(nuevo_usuario)})
     
     except Exception as e:
         db.rollback()
-        return JSONResponse(status_code=500,content={"mensaje":"NO Guardado","Excepcion":str(e)})
+        return JSONResponse(status_code=500, content={"mensaje": "NO Guardado", "Excepcion": str(e)})
 
     finally:
         db.close()
         
 #endpoint para actualizar usuario
-""" @app.put('/usuarios/{id}', response_model=modelUsuario,tags=['Operaciones CRUD'])
+@app.put('/usuarios/{id}', response_model=modelUsuario, tags=['Operaciones CRUD'])
 def actualizar_usuario(id: int, usuario_actualizado: modelUsuario):
-    for index, usr in enumerate(usuarios):
-        if usr["id"] == id:
-            usuarios[index]=usuario_actualizado.model_dump()
-            return usuarios[index]
-    raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    db = Session()
+    try:
+        usuario_db = db.query(User).filter(User.id == id).first()
+        if not usuario_db:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        for key, value in usuario_actualizado.model_dump().items():
+            setattr(usuario_db, key, value)
+        
+        db.commit()
+        return JSONResponse(content={"mensaje": "Usuario actualizado correctamente", "usuario": jsonable_encoder(usuario_db)})
+    
+    except Exception as e:
+        db.rollback()
+        return JSONResponse(status_code=500, content={"mensaje": "No se pudo actualizar el usuario", "Excepcion": str(e)})
+    
+    finally:
+        db.close()
 
 #endpoint para eliminar usuario 
 @app.delete('/usuarios/{id}', tags=['Operaciones CRUD'])
 def eliminar_usuario(id: int):
-    for usuario in usuarios:
-        if usuario["id"] == id:
-            usuarios.remove(usuario)
-            return {"mensaje": "Usuario eliminado correctamente"}
-    raise HTTPException(status_code=404, detail="Usuario no encontrado") """
+    db = Session()
+    try:
+        usuario_db = db.query(User).filter(User.id == id).first()
+        if not usuario_db:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        db.delete(usuario_db)
+        db.commit()
+        return JSONResponse(content={"mensaje": "Usuario eliminado correctamente"})
+    
+    except Exception as e:
+        db.rollback()
+        return JSONResponse(status_code=500, content={"mensaje": "No se pudo eliminar el usuario", "Excepcion": str(e)})
+    
+    finally:
+        db.close()
 
 #endpoint para generar un token
 @app.post('/auth', tags=['Autentificación'])
